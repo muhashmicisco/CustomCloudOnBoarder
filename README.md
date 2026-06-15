@@ -1,2 +1,141 @@
-# CustomCloudOnBoarder
-Tool to Onboard Devices in Semi-Personal Mode and more
+# Cisco RoomOS Bulk Cloud Onboarding Tool (GA 1.0)
+
+This PowerShell automation tool is designed for Customer Delivery Architects and Administrators to perform bulk registration of Cisco RoomOS devices to the Webex Cloud. It bridges the gap between local device administration and Webex Control Hub management, automating identity resolution, cloud provisioning, and Webex Calling enablement.
+
+## 🚀 Key Features
+
+*   **Identity Resolution**: Automatically resolves Webex User Emails to `personId` and Location Names to `locationId`.
+*   **Selective SSL Validation**: Uses standard secure trust chains for Webex Cloud APIs and dynamically toggles to bypass mode for local device IP connections.
+*   **XML-Based Local Execution**: Utilizes the `/putxml` API for local device commands to ensure registration stability and naming integrity.
+*   **Webex Calling Automation**: Handles the transition to Cloud Calling mode and assigns Extensions/Locations in a single flow.
+*   **Race-Condition Prevention**: Includes optimized countdown timers (up to 120 seconds) to allow the Webex Cloud and local hardware to synchronize states.
+*   **Verbose Debugging & Audit Logs**: Features a 3-level debug system and generates timestamped CSV logs for every execution.
+
+---
+
+## 🛠 Prerequisites
+
+### 1. Webex Developer Token
+You must obtain a Bearer Token from [developer.webex.com](https://developer.webex.com). Ensure your token has the following scopes:
+*   `spark:workspaces_write` (Create and update workspaces)
+*   `spark:people_read` (Resolve user emails)
+*   `spark:devices_write` (Generate activation codes)
+*   `spark:locations_read` (Resolve calling location names)
+
+### 2. Network Requirements
+*   The machine running the script must have HTTPS (443) access to the Webex Cloud APIs (`webexapis.com`).
+*   The machine must have HTTPS access to the local IP addresses of the Cisco devices.
+*   PowerShell 5.1 or higher.
+
+---
+
+## 📋 CSV Configuration
+
+If using **Bulk Mode**, create a CSV file (e.g., `devices.csv`) with the following headers. The script is case-sensitive regarding these headers.
+
+| Header | Description | Required |
+| :--- | :--- | :--- |
+| **IP** | Local IP address of the RoomOS device. | Yes |
+| **Username** | Local admin username for the device. | Yes |
+| **Password** | Local admin password for the device. | Yes |
+| **Email** | Webex User Email for Personalization. | Optional |
+| **Location** | Friendly Name of the Webex Calling Location. | Optional |
+| **Extension** | Extension to assign to the Workspace. | Optional |
+| **WorkspaceName** | Custom name for Shared Workspaces. | Optional |
+
+### Sample `devices.csv`
+```csv
+IP,Username,Password,Email,Location,Extension,WorkspaceName
+10.88.145.110,admin,Cisco123!,,,,
+10.88.145.111,admin,Cisco123!,,,,Huddle Room Alpha
+10.88.145.112,admin,Cisco123!,psmith@example.com,,,
+10.88.145.113,admin,Cisco123!,,Richardson,5501,Conference Room 4
+10.88.145.114,admin,Cisco123!,mjones@example.com,Richardson,5502,
+```
+
+---
+
+## 🔍 Process Breakdown
+
+The script executes in five distinct phases:
+
+### Phase 1: Identity Resolution
+The script resolves friendly inputs into technical IDs. It fetches the `personId` and `displayName` from the People API and the `locationId` from the Locations API.
+
+### Phase 2: Cloud Provisioning
+A Webex Workspace is created using the resolved identity. If personalized, it uses the User's name; if shared, it uses the `WorkspaceName` or defaults to `WS-IP`. An activation code is then generated.
+
+### Phase 3: Local Device Handshake
+The script connects to the local device IP and:
+1.  Sets the `SystemUnit Name` to match the Cloud identity.
+2.  Bypasses the **First Time Setup Wizard**.
+3.  Applies **Proxy Settings** (if provided).
+4.  Initiates the registration using the cloud-provided activation code.
+
+### Phase 4: Personalization (Optional)
+If an email was provided, the script flips the device from "Shared" to "Personal" mode. A 15-second safety delay is triggered to allow the device to reboot its registration services.
+
+### Phase 5: Calling Enablement
+If a Location and Extension were provided:
+1.  The device is sent a `ConvertToCloud` XML command.
+2.  **2-Minute Safety Delay**: The script waits for the cloud calling sub-system to initialize.
+3.  A `PUT` request is sent to the Workspace API to assign the extension and location, explicitly locking in the `displayName`.
+
+---
+
+## ⚙️ Debug Levels
+
+You can toggle the verbosity of the script by changing the `$DebugLevel` variable at the top of the `.ps1` file:
+
+*   **Level 1 (Basic)**: Shows standard progress and success/fail results.
+*   **Level 2 (Technical)**: Adds API URIs, HTTP Methods, and Status Codes.
+*   **Level 3 (Verbose)**: Adds full JSON/XML request bodies and full API response payloads. Recommended for initial troubleshooting.
+
+---
+
+## 📊 Logging & Debugging
+
+Every execution generates a CSV log file: `ExecutionLog_YYYYMMDD_HHMMSS.csv`.
+This log captures:
+*   **Success/Fail** status.
+*   **Resolved IDs** (Workspace, Person, Location).
+*   **HTTP Status Codes** for the final calling enablement.
+*   **Detailed Error Reasons** including raw API error messages from Cisco.
+
+## 🛠 Troubleshooting Guide
+
+### 1. Connection & Security Issues
+
+| Symptom | Root Cause | Resolution |
+| :--- | :--- | :--- |
+| **"The underlying connection was closed: An unexpected error occurred on a send."** | **TLS/SSL Conflict**: Forcing a global SSL bypass (`ServerCertificateValidationCallback = { $true }`) often causes corporate proxies or the Webex API to drop the connection. | **Selective SSL Toggling**: The script is designed to use standard Windows trust chains for `webexapis.com` and only bypasses validation for local device IPs. Ensure you are using the `GA 1.0` logic which resets the callback to `$null` before cloud calls. |
+| **Security Warning: "Script Execution Risk"** | **IE Engine Dependency**: `Invoke-WebRequest` defaults to using the Internet Explorer engine to parse responses, which triggers a security warning in modern environments. | **Basic Parsing**: The script utilizes the `-UseBasicParsing` switch for all web requests to bypass the IE engine and suppress this warning. |
+| **401 Unauthorized Error** | **Token Expiration**: Webex Developer Personal Access Tokens expire every 12 hours. | **Refresh Token**: Obtain a new token from the [Webex Developer Portal](https://developer.webex.com) and restart the script. |
+
+### 2. Naming & Identity Issues
+
+| Symptom | Root Cause | Resolution |
+| :--- | :--- | :--- |
+| **Workspace Name reverts to IP address after Calling Enablement.** | **API Overwrite**: The Webex `PUT` method is a full object replacement. If the `displayName` is missing from the Phase 5 payload, the cloud reverts the name to the original value. | **Name Persistence**: The script captures the `identityName` in Phase 1 and explicitly sends it in the Phase 5 `PUT` request to "lock" the name. |
+| **Personalized device does not show the User's name.** | **Race Condition**: The device was sent a rename command before the cloud finished the personalization handshake. | **Identity First Strategy**: The script resolves the User's name first and creates the Workspace with that name *before* the device ever registers, ensuring naming consistency. |
+| **"Variable reference is not valid" (Parser Error)** | **Scope Conflict**: PowerShell interprets `$Message:` as a drive scope (like `env:`). | **Variable Delimiters**: The script uses `${Message}` syntax in the countdown function to prevent the parser from misinterpreting colons. |
+
+### 3. Registration & Calling Failures
+
+| Symptom | Root Cause | Resolution |
+| :--- | :--- | :--- |
+| **"Workspace Registration timed out"** | **Cloud Latency**: The device may take longer than 60 seconds to establish a secure websocket with the Webex Cloud. | **Increased Polling**: The script is configured for 15-20 polling attempts (up to 100 seconds) to allow for slow network handshakes. |
+| **Webex Calling Enablement Fails (HTTP 400)** | **Mode Mismatch**: The device must be in "Cloud" mode before calling features can be assigned via API. | **Cloud Conversion**: The script sends the `ConvertToCloud` XML command and waits for a **120-second safety delay** to ensure the calling sub-system is ready. |
+| **Webex Calling Enablement Fails (HTTP 409/Conflict)** | **Duplicate Extension**: The extension provided is already assigned to another user or workspace in that location. | **Audit Extensions**: Check Webex Control Hub for extension conflicts and update your CSV with a unique value. |
+| **Device stuck on Setup Wizard** | **API Blocked**: The device API may not accept certain configurations while the physical screen is on the First Time Wizard. | **Wizard Bypass**: The script sends a `FirstTimeWizard Stop` command as the very first local interaction to clear the API path. |
+
+---
+
+## 💡 Pro-Tips for Success
+
+1.  **Use Debug Level 3**: If a device fails, set `$DebugLevel = 3`. This will print the exact JSON body sent to Webex and the raw error response returned. This is the fastest way to see if a failure is due to a "Duplicate Extension" or "Invalid Location ID."
+2.  **Verify CSV Headers**: The script is case-sensitive. Ensure your headers are exactly: `IP,Username,Password,Email,Location,Extension,WorkspaceName`.
+3.  **Location Names**: Ensure the `Location` name in your CSV matches the name in Control Hub **exactly** (including spaces). The script performs an exact match search to prevent assigning devices to the wrong site.
+4.  **The 2-Minute Rule**: Do not decrease the 120-second timer in Phase 5. Webex Calling registration involves multiple back-end microservices; cutting this timer short is the #1 cause of calling enablement failures.
+
+***
