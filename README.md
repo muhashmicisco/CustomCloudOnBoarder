@@ -138,5 +138,8 @@ This log captures:
 3.  **Location Names**: Ensure the `Location` name in your CSV matches the name in Control Hub **exactly** (including spaces). The script performs an exact match search to prevent assigning devices to the wrong site.
 4.  **The 2-Minute Rule**: Do not decrease the 120-second timer in Phase 5. Webex Calling registration involves multiple back-end microservices; cutting this timer short is the #1 cause of calling enablement failures.
 
+##  Logic Diagram:
+<img width="2638" height="5510" alt="image" src="https://github.com/user-attachments/assets/f21f308e-8d5e-4dd6-afb6-4b44be8051a3" />
+
 Note: Contains AI-generated Code
 ***
