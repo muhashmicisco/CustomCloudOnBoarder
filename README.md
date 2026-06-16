@@ -2,7 +2,7 @@
 
 This PowerShell automation tool is designed for Customer Delivery Architects and Administrators to perform bulk registration of Cisco RoomOS devices to the Webex Cloud. It bridges the gap between local device administration and Webex Control Hub management, automating identity resolution, cloud provisioning, and Webex Calling enablement. 
 
-**Note: Workspace Personalization is done using ASYNC flag enabling you to keep the Workspace visible and a seperate user dial-plan. Workspaces will not show any scheduling is active, but the user's calender will sync as if a true personal device. Line 198 can be set to Synchronous to hide the Workspace and move the device under the user, which is the standard deployment based on Cisco Documentation.
+**IMPORTANT: Workspace Personalization is done using ASYNC flag enabling you to keep the Workspace visible and a seperate user dial-plan. Workspaces will not show any scheduling is active, but the user's calender will sync as if a true personal device. Line 198 can be set to Synchronous to hide the Workspace and move the device under the user, which is the standard deployment based on Cisco Documentation.
 
 ## 🚀 Key Features
 
