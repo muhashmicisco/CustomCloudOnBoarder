@@ -26,7 +26,7 @@ You must obtain a Bearer Token from [developer.webex.com](https://developer.webe
 
 ### 2. Network Requirements
 *   The machine running the script must have HTTPS (443) access to the Webex Cloud APIs (`webexapis.com`).
-*   The machine must have HTTPS access to the local IP addresses of the Cisco devices.
+*   The machine must have HTTPS access to the local IP addresses of the Cisco devices, the set username and password.
 *   PowerShell 5.1 or higher.
 
 ---
