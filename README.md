@@ -80,6 +80,9 @@ The script connects to the local device IP and:
 3.  Applies **Proxy Settings** (if provided).
 4.  Initiates the registration using the cloud-provided activation code.
 
+**Note: If a PACURL is needed instead of Manual Proxy, update the Script line 171 with the following XML:**<br>
+```xml$proxyXml = "<Configuration><NetworkServices><HTTP><Proxy><Mode>PACUrl</Mode><PACUrl>https://pac-server.com/proxy.pac</PACUrl></Proxy></HTTP></NetworkServices></Configuration>"```
+
 ### Phase 4: Personalization (Optional)
 If an email was provided, the script flips the device from "Shared" to "Personal" mode. A 15-second safety delay is triggered to allow the device to reboot its registration services.
 
