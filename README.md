@@ -52,7 +52,6 @@ IP,Username,Password,Email,Location,Extension,WorkspaceName
 10.88.145.113,admin,Cisco123!,,Richardson,5501,Conference Room 4
 10.88.145.114,admin,Cisco123!,mjones@example.com,Richardson,5502,
 ```
----
 
 ### Scenario Breakdown:
 
