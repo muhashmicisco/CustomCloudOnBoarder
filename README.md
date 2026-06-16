@@ -52,6 +52,15 @@ IP,Username,Password,Email,Location,Extension,WorkspaceName
 10.88.145.113,admin,Cisco123!,,Richardson,5501,Conference Room 4
 10.88.145.114,admin,Cisco123!,mjones@example.com,Richardson,5502,
 ```
+---
+
+### Scenario Breakdown:
+
+*   **Row 1 (Basic Shared)**: Only IP and credentials. Creates a Workspace named WS-10.88.145.110. No calling or personalization.
+*   **Row 2 (Shared with Custom Name)**: No email provided. Creates a Workspace and renames the device to Huddle Room Alpha.
+*   **Row 3 (Personalization Only)**: Email provided. Resolves the user's name (e.g., "Peter Smith"), creates the workspace as "Peter Smith", and flips the device to Personal Mode.
+*   **Row 4 (Shared with Webex Calling)**: No email. Renames the workspace to Conference Room 4, converts the device to Cloud mode, and assigns extension 5501 in the Richardson location.
+*   **Row 5 (Personalization with Webex Calling)**: Email provided. Names the device after the user, personalizes it, converts it to Cloud mode, and assigns extension 5502 in the Richardson location.  
 
 ---
 
