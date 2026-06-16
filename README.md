@@ -71,7 +71,7 @@ The script executes in five distinct phases:
 The script resolves friendly inputs into technical IDs. It fetches the `personId` and `displayName` from the People API and the `locationId` from the Locations API.
 
 ### Phase 2: Cloud Provisioning
-A Webex Workspace is created using the resolved identity. If personalized, it uses the User's name; if shared, it uses the `WorkspaceName` or defaults to `WS-IP`. An activation code is then generated.
+A Webex Workspace is created using the resolved identity. If personalized, it uses the User's name; if shared, it uses the `WorkspaceName` (optional) or defaults to `WS-IP`. An activation code is then generated.
 
 ### Phase 3: Local Device Handshake
 The script connects to the local device IP and:
