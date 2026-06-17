@@ -205,7 +205,7 @@ foreach ($device in $devices) {
 
         # --- PHASE 5: Cloud Conversion & Calling ---
         if ($tracker.LocationID -ne "N/A" -and $currentExt) {
-            Write-Host "[5/5] Enabling Webex Calling..." -ForegroundColor DarkCyan
+            Write-Host "[5/5] Converting to Cloud & Enabling Webex Calling if selected..." -ForegroundColor DarkCyan
             [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
             $null = Invoke-RestMethod -Uri "https://$($device.IP)/putxml" -Method Post -Headers $deviceXmlHeaders -Body "<Command><Webex><Registration><ConvertToCloud><Confirm>Yes</Confirm></ConvertToCloud></Registration></Webex></Command>"
             
