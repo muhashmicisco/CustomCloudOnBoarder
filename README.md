@@ -78,7 +78,7 @@ A Webex Workspace is created using the resolved identity. If personalized, it us
 ### Phase 3: Local Device Handshake
 The script connects to the local device IP and:
 1.  Sets the `SystemUnit Name` to match the Cloud identity.
-2.  Bypasses the **First Time Setup Wizard**.
+2.  Turn OFF the **First Time Setup Wizard**.
 3.  Applies **Manual Proxy Settings** (if provided/optional).
 4.  Initiates the registration using the cloud-provided activation code.
 
