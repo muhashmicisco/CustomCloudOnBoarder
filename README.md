@@ -87,10 +87,11 @@ The script connects to the local device IP and:
 ### Phase 4: Personalization (Optional)
 If an email was provided, the script flips the device from "Shared" to "Personal" mode. A 15-second safety delay is triggered to allow the device to reboot its registration services.
 
-### Phase 5: Calling Enablement (Optional)
+### Phase 5: Full-Cloud Registration & Calling Enablement (Optional)
+The device is sent a `ConvertToCloud` XML command (at which point the device will restart).
+
 If a Location and Extension were provided:
-1.  The device is sent a `ConvertToCloud` XML command.
-2.  **2-Minute Safety Delay**: The script waits for the cloud calling sub-system to initialize.
+1.  **2-Minute Safety Delay**: The script waits for the cloud calling sub-system to initialize.
 3.  A `PUT` request is sent to the Workspace API to assign the extension and location, explicitly locking in the `displayName`.
 
 ---
