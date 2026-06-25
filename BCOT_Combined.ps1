@@ -1,29 +1,29 @@
 <#
 .SYNOPSIS
-    Automated Bulk Onboarding for Cisco RoomOS devices to Webex Cloud (GA 1.1).
+    Automated Bulk Onboarding for Cisco RoomOS devices to Webex Cloud (GA 1.2).
     
 .DESCRIPTION
     Phase 1: Identity Resolution with Safety Gates (User/Location).
     Phase 2: Cloud Workspace Creation.
     Phase 3: Local Device Prep (Name, Wizard, Proxy Selection) & Registration.
     Phase 4: Personalization (Optional).
-    Phase 5: Cloud Conversion & Calling Enablement (2-minute safety delay).
+    Phase 5: Cloud Conversion & Intelligent Calling Enablement (Fast-track with 120s fallback).
 #>
 
 # --- CONFIGURATION: SET DEBUG LEVEL HERE ---
-$DebugLevel = 1 
+$DebugLevel = 3 
 
 # 1. Setup Security Protocols
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
 [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
 $originalCallback = [System.Net.ServicePointManager]::ServerCertificateValidationCallback
 
-Write-Host "=== Cisco RoomOS Bulk Cloud Onboarding (GA Code 1.1) ===" -ForegroundColor Cyan
+Write-Host "=== Cisco RoomOS Bulk Cloud Onboarding (GA Code 1.2) ===" -ForegroundColor Cyan
 Write-Host "Debug Level: $DebugLevel" -ForegroundColor DarkGray
 
 # --- Section 1: Source Selection (Handles Quoted Paths) ---
 $csvPathInput = Read-Host "`nEnter CSV file path (Leave BLANK for single device)"
-$csvPath = $csvPathInput.Trim('"') # Removes quotes from Windows "Copy as Path"
+$csvPath = $csvPathInput.Trim('"') 
 $devices = @()
 
 if (-not [string]::IsNullOrWhiteSpace($csvPath)) {
@@ -50,10 +50,7 @@ Write-Host "2) Manual Proxy (Static URL)"
 Write-Host "3) PAC URL (Auto-config)"
 $proxyChoice = Read-Host "Select an option (1-3)"
 $proxyUrl = $null
-
-if ($proxyChoice -eq '2' -or $proxyChoice -eq '3') {
-    $proxyUrl = Read-Host "Enter the Proxy/PAC URL"
-}
+if ($proxyChoice -eq '2' -or $proxyChoice -eq '3') { $proxyUrl = Read-Host "Enter the Proxy/PAC URL" }
 
 # --- Section 3: Webex Credentials ---
 $bearerToken = Read-Host "`nEnter Webex Bearer Token"
@@ -100,7 +97,6 @@ foreach ($device in $devices) {
 
     Write-Host "`n--------------------------------------------------" -ForegroundColor Gray
     Write-Host "Processing Device: $($device.IP)" -ForegroundColor Yellow
-    Write-Host "--------------------------------------------------" -ForegroundColor Gray
     
     $tracker = [PSCustomObject]@{ IP=$device.IP; Success="FAIL"; IdentityName=""; WorkspaceID="N/A"; PersonID="N/A"; LocationID="N/A"; Extension=$currentExt; HttpStatus=""; Reason="" }
     $base64 = [Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$($device.Username):$($device.Password)"))
@@ -112,7 +108,6 @@ foreach ($device in $devices) {
         Write-Host "[1/5] Performing Cloud Lookups..." -ForegroundColor DarkCyan
         [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $originalCallback
         
-        # 1. User Lookup
         if ($currentEmail) {
             $userUri = "https://webexapis.com/v1/people?email=$([Uri]::EscapeDataString($currentEmail))"
             $userResp = Invoke-RestMethod -Uri $userUri -Method Get -Headers $webexHeaders
@@ -124,14 +119,11 @@ foreach ($device in $devices) {
                 Write-Host "  [!] User ($currentEmail) NOT found." -ForegroundColor Yellow
                 $choice = Read-Host "      [C]ontinue (Skip Personalization), [S]kip Device, [Q]uit"
                 if ($choice -eq 's') { $tracker.Reason = "User not found; skipped."; $executionResults += $tracker; continue }
-                if ($choice -eq 'q') { Write-Host "Exiting script."; exit }
+                if ($choice -eq 'q') { exit }
             }
-        } elseif ($currentWSName) {
-            $identityName = $currentWSName
-        }
+        } elseif ($currentWSName) { $identityName = $currentWSName }
         $tracker.IdentityName = $identityName
 
-        # 2. Location Lookup
         if ($currentLoc) {
             $locUri = "https://webexapis.com/v1/locations?name=$([Uri]::EscapeDataString($currentLoc))"
             $locResp = Invoke-RestMethod -Uri $locUri -Method Get -Headers $webexHeaders
@@ -143,7 +135,7 @@ foreach ($device in $devices) {
                 Write-Host "  [!] Location ($currentLoc) NOT found." -ForegroundColor Yellow
                 $choice = Read-Host "      [C]ontinue (Skip Calling), [S]kip Device, [Q]uit"
                 if ($choice -eq 's') { $tracker.Reason = "Location not found; skipped."; $executionResults += $tracker; continue }
-                if ($choice -eq 'q') { Write-Host "Exiting script."; exit }
+                if ($choice -eq 'q') { exit }
             }
         }
 
@@ -159,26 +151,16 @@ foreach ($device in $devices) {
         # --- PHASE 3: Local Device Handshake ---
         Write-Host "[3/5] Local Device Handshake..." -ForegroundColor DarkCyan
         [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-
-        # 1. Set SystemUnit Name
         $null = Invoke-RestMethod -Uri "https://$($device.IP)/putxml" -Method Post -Headers $deviceXmlHeaders -Body "<Configuration><SystemUnit><Name>$identityName</Name></SystemUnit></Configuration>"
-
-        # 2. Wizard Disablement
         $null = Invoke-RestMethod -Uri "https://$($device.IP)/putxml" -Method Post -Headers $deviceXmlHeaders -Body "<Command><SystemUnit><FirstTimeWizard><Stop></Stop></FirstTimeWizard></SystemUnit></Command>"
 
-        # 3. Proxy Configuration
         if ($proxyChoice -ne '1') {
-            Write-Log 1 "Applying Proxy Settings..." "Gray"
-            $proxyXml = if ($proxyChoice -eq '2') {
-                "<Configuration><NetworkServices><HTTP><Mode>HTTP+HTTPS</Mode><Proxy><Url>$proxyUrl</Url><Mode>Manual</Mode></Proxy></HTTP></NetworkServices></Configuration>"
-            } else {
-                "<Configuration><NetworkServices><HTTP><Mode>HTTP+HTTPS</Mode><Proxy><PACUrl>$proxyUrl</PACUrl><Mode>PACURL</Mode></Proxy></HTTP></NetworkServices></Configuration>"
-            }
+            $proxyXml = if ($proxyChoice -eq '2') { "<Configuration><NetworkServices><HTTP><Mode>HTTP+HTTPS</Mode><Proxy><Url>$proxyUrl</Url><Mode>Manual</Mode></Proxy></HTTP></NetworkServices></Configuration>" }
+                        else { "<Configuration><NetworkServices><HTTP><Mode>HTTP+HTTPS</Mode><Proxy><PACUrl>$proxyUrl</PACUrl><Mode>PACURL</Mode></Proxy></HTTP></NetworkServices></Configuration>" }
             $null = Invoke-RestMethod -Uri "https://$($device.IP)/putxml" -Method Post -Headers $deviceXmlHeaders -Body $proxyXml
             Start-Countdown -Seconds 8 -Message "Waiting for HTTP restart"
         }
 
-        # 4. Registration
         $null = Invoke-RestMethod -Uri "https://$($device.IP)/putxml" -Method Post -Headers $deviceXmlHeaders -Body "<Command><Webex><Registration><Start><ActivationCode>$workspaceCode</ActivationCode><RegistrationType>Manual</RegistrationType><SecurityAction>NoAction</SecurityAction></Start></Registration></Webex></Command>"
         
         $wsRegistered = $false
@@ -187,7 +169,6 @@ foreach ($device in $devices) {
             try {
                 [xml]$xmlStatus = Invoke-RestMethod -Uri $statusUri -Method Get -Headers $deviceXmlHeaders
                 if ($xmlStatus.Status.Webex.Status -eq "Registered") { $wsRegistered = $true; break }
-                Write-Log 2 "Status Check: $($xmlStatus.Status.Webex.Status)"
             } catch { }
         }
         if (-not $wsRegistered) { throw "Workspace Registration timed out." }
@@ -204,25 +185,42 @@ foreach ($device in $devices) {
             $tracker.Reason = "Registered & Personalized"
         } else { $tracker.Reason = "Registered (Shared)" }
 
-        # --- PHASE 5: Cloud Conversion & Calling ---
+        # --- PHASE 5: Cloud Conversion & Intelligent Calling Loop ---
         if ($tracker.LocationID -ne "N/A" -and $currentExt) {
             Write-Host "[5/5] Enabling Webex Calling..." -ForegroundColor DarkCyan
             [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
             $null = Invoke-RestMethod -Uri "https://$($device.IP)/putxml" -Method Post -Headers $deviceXmlHeaders -Body "<Command><Webex><Registration><ConvertToCloud><Confirm>Yes</Confirm></ConvertToCloud></Registration></Webex></Command>"
-            Start-Countdown -Seconds 120 -Message "Finalizing Cloud State (2-Minute Delay)"
-
+            
             [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $originalCallback
             $updateBody = @{ displayName = $identityName; calling = @{ type = "webexCalling"; webexCalling = @{ extension = $currentExt; locationId = $tracker.LocationID } } }
-            try {
-                $response = Invoke-WebRequest -Uri "https://webexapis.com/v1/workspaces/$($tracker.WorkspaceID)" -Method Put -Headers $webexHeaders -Body ($updateBody | ConvertTo-Json -Depth 10) -UseBasicParsing
-                $tracker.HttpStatus = [int]$response.StatusCode
-                Write-Log 1 "Status Code: $($tracker.HttpStatus) OK" "Green"
-                $tracker.Reason += " & Calling Enabled"
-            } catch { 
-                $tracker.HttpStatus = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { "Err" }
-                $errRaw = Get-WebexError $_
-                Write-Log 1 "Status Code: $($tracker.HttpStatus) FAIL" "Red"
-                $tracker.Reason += " (Calling Failed: $errRaw)"
+            $updateUri = "https://webexapis.com/v1/workspaces/$($tracker.WorkspaceID)"
+            $jsonPayload = $updateBody | ConvertTo-Json -Depth 10
+
+            $success = $false
+            for ($attempt = 1; $attempt -le 4; $attempt++) {
+                if ($attempt -eq 4) {
+                    Start-Countdown -Seconds 120 -Message "Finalizing Cloud State (Extended Fallback Delay)"
+                } elseif ($attempt -gt 1) {
+                    Start-Sleep -Seconds 5
+                    Write-Log 1 "Retrying Calling Enablement (Attempt $attempt/3)..." "Yellow"
+                }
+
+                try {
+                    $response = Invoke-WebRequest -Uri $updateUri -Method Put -Headers $webexHeaders -Body $jsonPayload -UseBasicParsing
+                    $tracker.HttpStatus = [int]$response.StatusCode
+                    Write-Log 1 "Status Code: $($tracker.HttpStatus) OK" "Green"
+                    $tracker.Reason += " & Calling Enabled"
+                    $success = $true; break
+                } catch {
+                    $tracker.HttpStatus = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { "Err" }
+                    $errRaw = Get-WebexError $_
+                    Write-Log 2 "Attempt $attempt failed with Code $($tracker.HttpStatus)" "Red"
+                    if ($attempt -eq 4) { 
+                        Write-Log 1 "Final Attempt Failed." "Red"
+                        Write-DebugLog "API ERROR RESPONSE" $errRaw
+                        $tracker.Reason += " (Calling Failed: $errRaw)"
+                    }
+                }
             }
         }
 
