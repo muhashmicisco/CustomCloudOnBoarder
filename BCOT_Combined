@@ -11,7 +11,7 @@
 #>
 
 # --- CONFIGURATION: SET DEBUG LEVEL HERE ---
-$DebugLevel = 3 
+$DebugLevel = 1 
 
 # 1. Setup Security Protocols
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
