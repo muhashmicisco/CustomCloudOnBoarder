@@ -1,24 +1,24 @@
 <#
 .SYNOPSIS
-    Automated Bulk Onboarding for Cisco RoomOS devices to Webex Cloud (GA 1.2).
+    Automated Bulk Onboarding for Cisco RoomOS devices to Webex Cloud (GA 1.3).
     
 .DESCRIPTION
     Phase 1: Identity Resolution with Safety Gates (User/Location).
-    Phase 2: Cloud Workspace Creation.
+    Phase 2: Cloud Workspace Creation with Identity-First naming.
     Phase 3: Local Device Prep (Name, Wizard, Proxy Selection) & Registration.
     Phase 4: Personalization (Optional).
-    Phase 5: Cloud Conversion & Intelligent Calling Enablement (Fast-track with 120s fallback).
+    Phase 5: Cloud Conversion & Intelligent Calling Loop (20s initial > 3 tries > 120s fallback).
 #>
 
 # --- CONFIGURATION: SET DEBUG LEVEL HERE ---
-$DebugLevel = 1 
+$DebugLevel = 3 
 
 # 1. Setup Security Protocols
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
 [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
 $originalCallback = [System.Net.ServicePointManager]::ServerCertificateValidationCallback
 
-Write-Host "=== Cisco RoomOS Bulk Cloud Onboarding (GA Code 1.2) ===" -ForegroundColor Cyan
+Write-Host "=== Cisco RoomOS Bulk Cloud Onboarding (GA Code 1.3) ===" -ForegroundColor Cyan
 Write-Host "Debug Level: $DebugLevel" -ForegroundColor DarkGray
 
 # --- Section 1: Source Selection (Handles Quoted Paths) ---
@@ -191,12 +191,16 @@ foreach ($device in $devices) {
             [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
             $null = Invoke-RestMethod -Uri "https://$($device.IP)/putxml" -Method Post -Headers $deviceXmlHeaders -Body "<Command><Webex><Registration><ConvertToCloud><Confirm>Yes</Confirm></ConvertToCloud></Registration></Webex></Command>"
             
+            # 1. Initial Sync Wait
+            Start-Countdown -Seconds 20 -Message "Initial Cloud Conversion Sync"
+
             [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $originalCallback
             $updateBody = @{ displayName = $identityName; calling = @{ type = "webexCalling"; webexCalling = @{ extension = $currentExt; locationId = $tracker.LocationID } } }
             $updateUri = "https://webexapis.com/v1/workspaces/$($tracker.WorkspaceID)"
             $jsonPayload = $updateBody | ConvertTo-Json -Depth 10
 
-            $success = $false
+            $callingSuccess = $false
+            # Attempt Loop: 1-3 (Fast), 4 (Extended Fallback)
             for ($attempt = 1; $attempt -le 4; $attempt++) {
                 if ($attempt -eq 4) {
                     Start-Countdown -Seconds 120 -Message "Finalizing Cloud State (Extended Fallback Delay)"
@@ -210,15 +214,14 @@ foreach ($device in $devices) {
                     $tracker.HttpStatus = [int]$response.StatusCode
                     Write-Log 1 "Status Code: $($tracker.HttpStatus) OK" "Green"
                     $tracker.Reason += " & Calling Enabled"
-                    $success = $true; break
+                    $callingSuccess = $true; break
                 } catch {
                     $tracker.HttpStatus = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { "Err" }
                     $errRaw = Get-WebexError $_
                     Write-Log 2 "Attempt $attempt failed with Code $($tracker.HttpStatus)" "Red"
                     if ($attempt -eq 4) { 
-                        Write-Log 1 "Final Attempt Failed." "Red"
-                        Write-DebugLog "API ERROR RESPONSE" $errRaw
-                        $tracker.Reason += " (Calling Failed: $errRaw)"
+                        Write-Log 1 "Final Calling Attempt Failed." "Red"
+                        $tracker.Reason += " (Converted-NoCalling: $errRaw)"
                     }
                 }
             }
