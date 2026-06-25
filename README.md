@@ -2,7 +2,7 @@
 
 This PowerShell automation tool is designed for Customer Delivery Architects and Administrators to perform bulk registration of on-net Cisco RoomOS devices (brand new out-of-box OR factory-reset) to the Webex Cloud. It bridges the gap between local device administration and Webex Control Hub management, automating identity resolution, cloud provisioning, and Webex Calling enablement (extension only). 
 
-**IMPORTANT: Workspace Semi-Personalization is done using the Device <b>XCOMMAND</b> flag enabling you to keep the Workspace visible and a seperate user and device dial-plan. Workspaces will not show any scheduling as active, but the user's calender will sync as if a true personal device. If the end-state is to move the device under a User (which is the standard deployment based on Cisco Documentation) the following WebexAPI must be run: https://developer.webex.com/devices/docs/api/v1/workspace-personalization/personalize-a-workspace. Note the previous Calling Config will follow the device, despite showing the User's dialplan in Control Hub.
+**IMPORTANT: Workspace Semi-Personalization is done using the Device <b>XCOMMAND</b> enabling you to keep the Workspace visible and a seperate user and device dial-plan. Workspaces will not show any scheduling as active, but the user's calender will sync as if a true personal device. If the end-state is to move the device under a User (which is the standard deployment based on Cisco Documentation) the following WebexAPI must be run: https://developer.webex.com/devices/docs/api/v1/workspace-personalization/personalize-a-workspace. Note the previous Calling Config will follow the device, despite showing the User's dialplan in Control Hub.
 
 ## 🚀 Key Features
 
