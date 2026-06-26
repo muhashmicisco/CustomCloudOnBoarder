@@ -15,7 +15,7 @@ Param(
     [int]$StopAt = 5,
 
     [Parameter(Mandatory=$false)]
-    [int]$LogLevel = 1,
+    [int]$LogLevel = 3,
 
     [Parameter(Mandatory=$false)]
     [string]$CSVPath,
@@ -36,17 +36,17 @@ $originalCallback = [System.Net.ServicePointManager]::ServerCertificateValidatio
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $summaryLogPath = "ExecutionSummary_$timestamp.csv"
 $debugLogPath = "DebugVerboseLog_$timestamp.txt"
-$GlobalDebugLevel = $LogLevel
+$GlobalLogLevel = $LogLevel
 
 Write-Host "=== Cisco RoomOS Bulk Cloud Onboarding (GA Code 1.6.1) ===" -ForegroundColor Cyan
-Write-Host "Log Level: $GlobalDebugLevel | Stop At Phase: $StopAt" -ForegroundColor Yellow
-if ($GlobalDebugLevel -eq 3) { Write-Host "Verbose Debug File: $debugLogPath" -ForegroundColor DarkGray }
+Write-Host "Log Level: $GlobalLogLevel | Stop At Phase: $StopAt" -ForegroundColor Yellow
+if ($GlobalLogLevel -eq 3) { Write-Host "Verbose Debug File: $debugLogPath" -ForegroundColor DarkGray }
 
 # --- Helper Functions ---
 
 function Write-Log {
     param([int]$Level, [string]$Message, [string]$Color = "Gray")
-    if ($GlobalDebugLevel -ge $Level) {
+    if ($GlobalLogLevel -ge $Level) {
         $prefix = if ($Level -eq 2) { "[TECH]" } elseif ($Level -eq 3) { "[VERBOSE]" } else { "" }
         $time = Get-Date -Format "HH:mm:ss"
         $formattedMsg = "$time $prefix $Message"
@@ -55,7 +55,7 @@ function Write-Log {
         Write-Host "  $formattedMsg" -ForegroundColor $Color
         
         # Output to debug file if Level 3
-        if ($GlobalDebugLevel -eq 3) {
+        if ($GlobalLogLevel -eq 3) {
             $formattedMsg | Out-File -FilePath $debugLogPath -Append
         }
     }
@@ -79,7 +79,7 @@ function Start-Countdown {
     Write-Host "`r  > ${Message}: Complete.                         " -ForegroundColor Gray
 }
 
-# --- Section 1: Source Selection ---
+# --- Section 1: Source Selection (Handles Quoted Paths) ---
 if ([string]::IsNullOrWhiteSpace($CSVPath)) {
     $csvPathInput = Read-Host "`nEnter CSV file path (Leave BLANK for single device)"
     $CSVPath = $csvPathInput.Trim('"') 
@@ -306,4 +306,4 @@ Write-Host "==================================================" -ForegroundColor
 $executionResults | Format-Table IP, Success, HttpStatus, Reason -AutoSize
 $executionResults | Export-Csv -Path $summaryLogPath -NoTypeInformation
 Write-Host "Summary saved to: $summaryLogPath" -ForegroundColor Green
-if ($GlobalDebugLevel -eq 3) { Write-Host "Verbose Debug Log saved to: $debugLogPath" -ForegroundColor Green }
+if ($GlobalLogLevel -eq 3) { Write-Host "Verbose Debug Log saved to: $debugLogPath" -ForegroundColor Green }
