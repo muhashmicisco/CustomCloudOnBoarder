@@ -1,20 +1,20 @@
 <#
 .SYNOPSIS
-    Automated Bulk Onboarding for Cisco RoomOS devices to Webex Cloud (GA 1.5).
+    Automated Bulk Onboarding for Cisco RoomOS devices to Webex Cloud (GA 1.6).
     
 .PARAMETER StopAt
-    The phase number to stop at (1-5). Default is 5 (Full Process).
-    1: Stop after Identity Lookups
-    2: Stop after Workspace Creation
-    3: Stop after Device Registration
-    4: Stop after Personalization
-    5: Full Process (Calling Enablement)
+    The phase number to stop at (1-5). Default is 5.
+.PARAMETER Debug
+    Sets the debug level (1-3). Default is 3.
 #>
 
 Param(
     [Parameter(Mandatory=$false)]
     [ValidateRange(1,5)]
     [int]$StopAt = 5,
+
+    [Parameter(Mandatory=$false)]
+    [int]$Debug = 3,
 
     [Parameter(Mandatory=$false)]
     [string]$CSVPath,
@@ -26,18 +26,59 @@ Param(
     [string]$OrgId
 )
 
-# --- CONFIGURATION: SET DEBUG LEVEL HERE ---
-$DebugLevel = 3 
-
 # 1. Setup Security Protocols
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
 [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
 $originalCallback = [System.Net.ServicePointManager]::ServerCertificateValidationCallback
 
-Write-Host "=== Cisco RoomOS Bulk Cloud Onboarding (GA Code 1.5) ===" -ForegroundColor Cyan
-Write-Host "Execution Mode: Stop at Phase $StopAt" -ForegroundColor Yellow
+# Initialize Logging Paths
+$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+$logPath = "ExecutionSummary_$timestamp.csv"
+$debugLogPath = "DebugVerboseLog_$timestamp.txt"
+$DebugLevel = $Debug
 
-# --- Section 1: Source Selection (Handles Quoted Paths) ---
+Write-Host "=== Cisco RoomOS Bulk Cloud Onboarding (GA Code 1.6) ===" -ForegroundColor Cyan
+Write-Host "Debug Level: $DebugLevel | Stop At Phase: $StopAt" -ForegroundColor Yellow
+if ($DebugLevel -eq 3) { Write-Host "Verbose Debug File: $debugLogPath" -ForegroundColor DarkGray }
+
+# --- Helper Functions ---
+
+function Write-Log {
+    param([int]$Level, [string]$Message, [string]$Color = "Gray")
+    if ($DebugLevel -ge $Level) {
+        $prefix = if ($Level -eq 2) { "[TECH]" } elseif ($Level -eq 3) { "[VERBOSE]" } else { "" }
+        $time = Get-Date -Format "HH:mm:ss"
+        $formattedMsg = "$time $prefix $Message"
+        
+        # Output to screen
+        Write-Host "  $formattedMsg" -ForegroundColor $Color
+        
+        # Output to debug file if Level 3
+        if ($DebugLevel -eq 3) {
+            $formattedMsg | Out-File -FilePath $debugLogPath -Append
+        }
+    }
+}
+
+function Get-WebexError {
+    param($ErrorRecord)
+    if ($ErrorRecord.Exception.Response) {
+        $reader = New-Object System.IO.StreamReader($ErrorRecord.Exception.Response.GetResponseStream())
+        return $reader.ReadToEnd()
+    }
+    return $ErrorRecord.Exception.Message
+}
+
+function Start-Countdown {
+    param([int]$Seconds, [string]$Message)
+    for ($i = $Seconds; $i -gt 0; $i--) {
+        Write-Host "`r  > ${Message}: $i seconds remaining...   " -NoNewline -ForegroundColor Yellow
+        Start-Sleep -Seconds 1
+    }
+    Write-Host "`r  > ${Message}: Complete.                         " -ForegroundColor Gray
+}
+
+# --- Section 1: Source Selection ---
 if ([string]::IsNullOrWhiteSpace($CSVPath)) {
     $csvPathInput = Read-Host "`nEnter CSV file path (Leave BLANK for single device)"
     $CSVPath = $csvPathInput.Trim('"') 
@@ -47,7 +88,7 @@ $devices = @()
 if (-not [string]::IsNullOrWhiteSpace($CSVPath)) {
     if (Test-Path $CSVPath) { 
         $devices = Import-Csv -Path $CSVPath 
-        Write-Host "Loaded $($devices.Count) devices from CSV." -ForegroundColor Green
+        Write-Log 1 "Loaded $($devices.Count) devices from CSV." "Green"
     } else { Write-Error "CSV not found at $CSVPath."; exit }
 } else {
     $singleIP = Read-Host "Enter Device IP"
@@ -76,34 +117,6 @@ if ([string]::IsNullOrWhiteSpace($OrgId)) { $OrgId = Read-Host "Enter Webex Org 
 
 $webexHeaders = @{ "Authorization"="Bearer $Token"; "Content-Type"="application/json"; "Accept"="application/json" }
 
-# --- Helper Functions ---
-
-function Write-Log {
-    param([int]$Level, [string]$Message, [string]$Color = "Gray")
-    if ($DebugLevel -ge $Level) {
-        $prefix = if ($Level -eq 2) { "[TECH]" } elseif ($Level -eq 3) { "[VERBOSE]" } else { "" }
-        Write-Host "  $prefix $Message" -ForegroundColor $Color
-    }
-}
-
-function Get-WebexError {
-    param($ErrorRecord)
-    if ($ErrorRecord.Exception.Response) {
-        $reader = New-Object System.IO.StreamReader($ErrorRecord.Exception.Response.GetResponseStream())
-        return $reader.ReadToEnd()
-    }
-    return $ErrorRecord.Exception.Message
-}
-
-function Start-Countdown {
-    param([int]$Seconds, [string]$Message)
-    for ($i = $Seconds; $i -gt 0; $i--) {
-        Write-Host "`r  > ${Message}: $i seconds remaining...   " -NoNewline -ForegroundColor Yellow
-        Start-Sleep -Seconds 1
-    }
-    Write-Host "`r  > ${Message}: Complete.                         " -ForegroundColor Gray
-}
-
 $executionResults = @()
 
 # --- Main Processing Loop ---
@@ -129,7 +142,9 @@ foreach ($device in $devices) {
         
         if ($currentEmail) {
             $userUri = "https://webexapis.com/v1/people?email=$([Uri]::EscapeDataString($currentEmail))"
+            Write-Log 2 "GET $userUri"
             $userResp = Invoke-RestMethod -Uri $userUri -Method Get -Headers $webexHeaders
+            Write-Log 3 "User Response: $($userResp | ConvertTo-Json -Depth 5)"
             if ($userResp.items.Count -gt 0) { 
                 $tracker.PersonID = $userResp.items[0].id 
                 $identityName = $userResp.items[0].displayName
@@ -145,7 +160,9 @@ foreach ($device in $devices) {
 
         if ($currentLoc) {
             $locUri = "https://webexapis.com/v1/locations?name=$([Uri]::EscapeDataString($currentLoc))"
+            Write-Log 2 "GET $locUri"
             $locResp = Invoke-RestMethod -Uri $locUri -Method Get -Headers $webexHeaders
+            Write-Log 3 "Location Response: $($locResp | ConvertTo-Json -Depth 5)"
             $match = $locResp.items | Where-Object { $_.name -eq $currentLoc -or $_.id -eq $currentLoc }
             if ($match) { 
                 $tracker.LocationID = $match[0].id
@@ -164,22 +181,36 @@ foreach ($device in $devices) {
         Write-Host "[2/5] Creating Workspace..." -ForegroundColor DarkCyan
         $wsBody = @{ displayName = $identityName; calling = @{ type = "webexEdgeForDevices" } }
         if ($OrgId) { $wsBody.Add("orgId", $OrgId) }
+        
+        Write-Log 2 "POST https://webexapis.com/v1/workspaces"
+        Write-Log 3 "Request Body: $($wsBody | ConvertTo-Json)"
         $wsResp = Invoke-RestMethod -Uri "https://webexapis.com/v1/workspaces" -Method Post -Headers $webexHeaders -Body ($wsBody | ConvertTo-Json -Depth 10)
         $tracker.WorkspaceID = $wsResp.id
+        Write-Log 3 "Full Workspace Response: $($wsResp | ConvertTo-Json -Depth 5)"
+
         $cResp = Invoke-RestMethod -Uri "https://webexapis.com/v1/devices/activationCode" -Method Post -Headers $webexHeaders -Body (@{ workspaceId=$tracker.WorkspaceID } | ConvertTo-Json)
         $workspaceCode = $cResp.code
+        Write-Log 3 "Activation Code Response: $($cResp | ConvertTo-Json)"
 
         if ($StopAt -eq 2) { $tracker.Success = "STOPPED"; $tracker.Reason = "Stopped after Phase 2"; $executionResults += $tracker; continue }
 
         # --- PHASE 3: Local Device Handshake ---
         Write-Host "[3/5] Local Device Handshake..." -ForegroundColor DarkCyan
         [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
-        $null = Invoke-RestMethod -Uri "https://$($device.IP)/putxml" -Method Post -Headers $deviceXmlHeaders -Body "<Configuration><SystemUnit><Name>$identityName</Name></SystemUnit></Configuration>"
+        
+        $nameXml = "<Configuration><SystemUnit><Name>$identityName</Name></SystemUnit></Configuration>"
+        Write-Log 2 "POSTXML Setting SystemUnit Name"
+        Write-Log 3 "XML: $nameXml"
+        $null = Invoke-RestMethod -Uri "https://$($device.IP)/putxml" -Method Post -Headers $deviceXmlHeaders -Body $nameXml
+
+        Write-Log 2 "POSTXML FirstTimeWizard Stop"
         $null = Invoke-RestMethod -Uri "https://$($device.IP)/putxml" -Method Post -Headers $deviceXmlHeaders -Body "<Command><SystemUnit><FirstTimeWizard><Stop></Stop></FirstTimeWizard></SystemUnit></Command>"
 
         if ($proxyChoice -ne '1') {
             $proxyXml = if ($proxyChoice -eq '2') { "<Configuration><NetworkServices><HTTP><Mode>HTTP+HTTPS</Mode><Proxy><Url>$proxyUrl</Url><Mode>Manual</Mode></Proxy></HTTP></NetworkServices></Configuration>" }
                         else { "<Configuration><NetworkServices><HTTP><Mode>HTTP+HTTPS</Mode><Proxy><PACUrl>$proxyUrl</PACUrl><Mode>PACURL</Mode></Proxy></HTTP></NetworkServices></Configuration>" }
+            Write-Log 2 "POSTXML Proxy Config"
+            Write-Log 3 "XML: $proxyXml"
             $null = Invoke-RestMethod -Uri "https://$($device.IP)/putxml" -Method Post -Headers $deviceXmlHeaders -Body $proxyXml
             Start-Countdown -Seconds 8 -Message "Waiting for HTTP restart"
         }
@@ -191,7 +222,9 @@ foreach ($device in $devices) {
             Start-Sleep -Seconds 5
             try {
                 [xml]$xmlStatus = Invoke-RestMethod -Uri $statusUri -Method Get -Headers $deviceXmlHeaders
-                if ($xmlStatus.Status.Webex.Status -eq "Registered") { $wsRegistered = $true; break }
+                $currentStatus = $xmlStatus.Status.Webex.Status
+                Write-Log 2 "Status Check: $currentStatus"
+                if ($currentStatus -eq "Registered") { $wsRegistered = $true; break }
             } catch { }
         }
         if (-not $wsRegistered) { throw "Workspace Registration timed out." }
@@ -203,8 +236,12 @@ foreach ($device in $devices) {
             Write-Host "[4/5] Applying Personalization..." -ForegroundColor DarkCyan
             [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $originalCallback
             $pResp = Invoke-RestMethod -Uri "https://webexapis.com/v1/devices/activationCode" -Method Post -Headers $webexHeaders -Body (@{ personId=$tracker.PersonID } | ConvertTo-Json)
+            Write-Log 3 "Personalization Code Response: $($pResp | ConvertTo-Json)"
+            
             [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
             $persXml = "<Command><Webex><Registration><Start><AccountLinkMode>Asynchronous</AccountLinkMode><ActivationCode>$($pResp.code)</ActivationCode><RegistrationType>Personalization</RegistrationType><SecurityAction>NoAction</SecurityAction></Start></Registration></Webex></Command>"
+            Write-Log 2 "POSTXML Personalization Start"
+            Write-Log 3 "XML: $persXml"
             $null = Invoke-RestMethod -Uri "https://$($device.IP)/putxml" -Method Post -Headers $deviceXmlHeaders -Body $persXml
             Start-Countdown -Seconds 15 -Message "Waiting for Personalization"
             $tracker.Reason = "Registered & Personalized"
@@ -225,31 +262,32 @@ foreach ($device in $devices) {
             $updateUri = "https://webexapis.com/v1/workspaces/$($tracker.WorkspaceID)"
             $jsonPayload = $updateBody | ConvertTo-Json -Depth 10
 
-            $callingSuccess = $false
             for ($attempt = 1; $attempt -le 4; $attempt++) {
                 if ($attempt -eq 4) { Start-Countdown -Seconds 120 -Message "Finalizing Cloud State (Fallback Delay)" }
                 elseif ($attempt -gt 1) { Start-Sleep -Seconds 5; Write-Log 1 "Retrying Calling (Attempt $attempt/3)..." "Yellow" }
 
                 try {
+                    Write-Log 2 "PUT $updateUri"
+                    Write-Log 3 "Request Body: $jsonPayload"
                     $response = Invoke-WebRequest -Uri $updateUri -Method Put -Headers $webexHeaders -Body $jsonPayload -UseBasicParsing
                     $tracker.HttpStatus = [int]$response.StatusCode
-                    $tracker.Reason += " & Calling Enabled"
-                    $callingSuccess = $true; break
+                    Write-Log 1 "Status Code: $($tracker.HttpStatus) OK" "Green"
+                    Write-Log 3 "Full API Response Body: $($response.Content)"
+                    $tracker.Reason += " & Calling Enabled"; break
                 } catch {
                     $tracker.HttpStatus = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { "Err" }
                     $errRaw = Get-WebexError $_
+                    Write-Log 2 "Attempt $attempt failed with Code $($tracker.HttpStatus)" "Red"
                     if ($attempt -eq 4) { 
-                        Write-Host "`n  [!] Calling Enablement failed after extended delay: $errRaw" -ForegroundColor Yellow
+                        Write-Host "`n  [!] Calling Enablement failed: $errRaw" -ForegroundColor Yellow
                         $choice = Read-Host "      [C]ontinue (Skip Calling), [S]kip Device, [Q]uit"
-                        if ($choice -eq 's') { $tracker.Reason += " (Calling Failed; skipped by user)"; $executionResults += $tracker; break }
+                        if ($choice -eq 's') { $tracker.Reason += " (Calling Failed; skipped)"; $executionResults += $tracker; break }
                         if ($choice -eq 'q') { exit }
-                        # If 'c', we just record the error and move on
                         $tracker.Reason += " (Converted-NoCalling: $errRaw)"
                     }
                 }
             }
-            # If user skipped device in the prompt, move to next device
-            if ($tracker.Reason -match "skipped by user") { continue }
+            if ($tracker.Reason -match "skipped") { continue }
         }
 
         $tracker.Success = "SUCCESS"; Write-Host "Success!" -ForegroundColor Green
@@ -265,6 +303,6 @@ Write-Host "`n==================================================" -ForegroundCol
 Write-Host "               EXECUTION SUMMARY                  " -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 $executionResults | Format-Table IP, Success, HttpStatus, Reason -AutoSize
-$logPath = "ExecutionLog_$(Get-Date -Format "yyyyMMdd_HHmmss").csv"
 $executionResults | Export-Csv -Path $logPath -NoTypeInformation
-Write-Host "Detailed log saved to: $logPath" -ForegroundColor Green
+Write-Host "Summary saved to: $logPath" -ForegroundColor Green
+if ($DebugLevel -eq 3) { Write-Host "Verbose Debug Log saved to: $debugLogPath" -ForegroundColor Green }
