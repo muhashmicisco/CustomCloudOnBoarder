@@ -14,7 +14,7 @@ Param(
     [int]$StopAt = 5,
 
     [Parameter(Mandatory=$false)]
-    [int]$Debug = 3,
+    [int]$Debug = 1,
 
     [Parameter(Mandatory=$false)]
     [string]$CSVPath,
