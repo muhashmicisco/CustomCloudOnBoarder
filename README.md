@@ -33,9 +33,9 @@ You must obtain a Bearer Token from [developer.webex.com](https://developer.webe
 *   Simply run the script to run all phases in a new PowerShell window: .\BCOT_Combined.ps1
 *   Stop after Lookups: .\BCOT_Combined.ps1 -StopAt 1
 *   Stop after Workspace Creation: .\BCOT_Combined.ps1 -StopAt 2
-*   Stop after Device Registration: .\BCOT_Combined.ps1 -StopAt 3
-*   Stop after Device Peronsonalization: .\BCOT_Combined.ps1 -StopAt 4
-*   Fully Automated (Stop after Device Peronsonalization): .\BCOT_Combined.ps1 -CSVPath "C:\devices.csv" -Token "YOUR_TOKEN" -StopAt 4
+*   Stop after Webex Edge Registration: .\BCOT_Combined.ps1 -StopAt 3
+*   Stop after Webex Edge Semi-Peronsonalization: .\BCOT_Combined.ps1 -StopAt 4
+*   Fully Automated using CSV: .\BCOT_Combined.ps1 -CSVPath "C:\devices.csv" -Token "YOUR_TOKEN" -StopAt 4
 
 ---
 
