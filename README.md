@@ -31,6 +31,8 @@ You must obtain a Bearer Token from [developer.webex.com](https://developer.webe
 
 ### 3. How To Use
 *   Simply run the script to run all phases in a new PowerShell window: .\BCOT_Combined.ps1
+
+*   Use flags to stop script at a certain Phase if you choose:
 *   Stop after Lookups: .\BCOT_Combined.ps1 -StopAt 1
 *   Stop after Workspace Creation: .\BCOT_Combined.ps1 -StopAt 2
 *   Stop after Webex Edge Registration: .\BCOT_Combined.ps1 -StopAt 3
