@@ -31,7 +31,7 @@ You must obtain a Bearer Token from [developer.webex.com](https://developer.webe
 
 ### 3. How To Use
   * Basic operation:<br>
-   Simply run the script (all 5 phases) in a new PowerShell window: .\BCOT_Combined.ps1<br><br>
+   Simply run the script (all 5 phases) in a new PowerShell window: .\BCOT_Combined.ps1<br>
    
   * Advanced options:<br>
    Use flags to stop script at a certain Phase if you choose:<br>
