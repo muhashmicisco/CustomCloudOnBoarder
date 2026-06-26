@@ -31,15 +31,15 @@ You must obtain a Bearer Token from [developer.webex.com](https://developer.webe
 
 ### 3. How To Use
   * Basic operation:<br>
-   Simply run the script (all 5 phases) in a new PowerShell window: .\BCOT_Combined.ps1<br>
+   Simply run the script (all 5 phases) in a new PowerShell window: `.\BCOT_Combined.ps1`<br>
    
   * Advanced options:<br>
    Use flags to stop script at a certain Phase if you choose:<br>
-   Stop after Lookups: .\BCOT_Combined.ps1 -StopAt 1<br>
-   Stop after Workspace Creation: .\BCOT_Combined.ps1 -StopAt 2<br>
-   Stop after Webex Edge Registration: .\BCOT_Combined.ps1 -StopAt 3<br>
-   Stop after Webex Edge Semi-Peronsonalization: .\BCOT_Combined.ps1 -StopAt 4<br>
-   Fully Automated using CSV: .\BCOT_Combined.ps1 -CSVPath "C:\devices.csv" -Token "YOUR_TOKEN" -StopAt 4<br>
+   Stop after Lookups: `.\BCOT_Combined.ps1 -StopAt 1`<br>
+   Stop after Workspace Creation: `.\BCOT_Combined.ps1 -StopAt 2`<br>
+   Stop after Webex Edge Registration: `.\BCOT_Combined.ps1 -StopAt 3`<br>
+   Stop after Webex Edge Semi-Peronsonalization: `.\BCOT_Combined.ps1 -StopAt 4`<br>
+   Fully Automated using CSV: `.\BCOT_Combined.ps1 -CSVPath "C:\devices.csv" -Token "YOUR_TOKEN" -StopAt 4`<br>
 
 ---
 
