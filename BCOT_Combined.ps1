@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Automated Bulk Onboarding for Cisco RoomOS devices to Webex Cloud (GA 1.6.1).
+    Automated Bulk Onboarding for Cisco RoomOS devices to Webex Cloud (GA 1.6.2).
     
 .PARAMETER StopAt
     The phase number to stop at (1-5). Default is 5.
@@ -35,12 +35,12 @@ $originalCallback = [System.Net.ServicePointManager]::ServerCertificateValidatio
 # Initialize Logging Paths
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
 $summaryLogPath = "ExecutionSummary_$timestamp.csv"
-$debugLogPath = "DebugVerboseLog_$timestamp.txt"
+$verboseErrorLogPath = "VerboseErrorLog_$timestamp.txt"
 $GlobalLogLevel = $LogLevel
 
-Write-Host "=== Cisco RoomOS Bulk Cloud Onboarding (GA Code 1.6.1) ===" -ForegroundColor Cyan
+Write-Host "=== Cisco RoomOS Bulk Cloud Onboarding (GA Code 1.6.2) ===" -ForegroundColor Cyan
 Write-Host "Log Level: $GlobalLogLevel | Stop At Phase: $StopAt" -ForegroundColor Yellow
-if ($GlobalLogLevel -eq 3) { Write-Host "Verbose Debug File: $debugLogPath" -ForegroundColor DarkGray }
+if ($GlobalLogLevel -eq 3) { Write-Host "Verbose Error Log File: $verboseErrorLogPath" -ForegroundColor DarkGray }
 
 # --- Helper Functions ---
 
@@ -54,9 +54,9 @@ function Write-Log {
         # Output to screen
         Write-Host "  $formattedMsg" -ForegroundColor $Color
         
-        # Output to debug file if Level 3
+        # Output to verbose error log file if Level 3
         if ($GlobalLogLevel -eq 3) {
-            $formattedMsg | Out-File -FilePath $debugLogPath -Append
+            $formattedMsg | Out-File -FilePath $verboseErrorLogPath -Append
         }
     }
 }
@@ -306,4 +306,4 @@ Write-Host "==================================================" -ForegroundColor
 $executionResults | Format-Table IP, Success, HttpStatus, Reason -AutoSize
 $executionResults | Export-Csv -Path $summaryLogPath -NoTypeInformation
 Write-Host "Summary saved to: $summaryLogPath" -ForegroundColor Green
-if ($GlobalLogLevel -eq 3) { Write-Host "Verbose Debug Log saved to: $debugLogPath" -ForegroundColor Green }
+if ($GlobalLogLevel -eq 3) { Write-Host "Verbose Error Log saved to: $verboseErrorLogPath" -ForegroundColor Green }
