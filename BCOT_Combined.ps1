@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Automated Bulk Onboarding for Cisco RoomOS devices to Webex Cloud (GA 1.4).
+    Automated Bulk Onboarding for Cisco RoomOS devices to Webex Cloud (GA 1.5).
     
 .PARAMETER StopAt
     The phase number to stop at (1-5). Default is 5 (Full Process).
@@ -34,10 +34,10 @@ $DebugLevel = 3
 [System.Net.ServicePointManager]::ServerCertificateValidationCallback = $null
 $originalCallback = [System.Net.ServicePointManager]::ServerCertificateValidationCallback
 
-Write-Host "=== Cisco RoomOS Bulk Cloud Onboarding (GA Code 1.4) ===" -ForegroundColor Cyan
+Write-Host "=== Cisco RoomOS Bulk Cloud Onboarding (GA Code 1.5) ===" -ForegroundColor Cyan
 Write-Host "Execution Mode: Stop at Phase $StopAt" -ForegroundColor Yellow
 
-# --- Section 1: Source Selection ---
+# --- Section 1: Source Selection (Handles Quoted Paths) ---
 if ([string]::IsNullOrWhiteSpace($CSVPath)) {
     $csvPathInput = Read-Host "`nEnter CSV file path (Leave BLANK for single device)"
     $CSVPath = $csvPathInput.Trim('"') 
@@ -72,7 +72,7 @@ if ($proxyChoice -eq '2' -or $proxyChoice -eq '3') { $proxyUrl = Read-Host "Ente
 
 # --- Section 3: Webex Credentials ---
 if ([string]::IsNullOrWhiteSpace($Token)) { $Token = Read-Host "`nEnter Webex Bearer Token" }
-if ([string]::IsNullOrWhiteSpace($OrgId)) { $OrgId = Read-Host "Enter Webex Org ID (Optional - Press Enter to skip)" }
+if ([string]::IsNullOrWhiteSpace($OrgId)) { $OrgId = Read-Host "Enter Webex Org ID (Optional)" }
 
 $webexHeaders = @{ "Authorization"="Bearer $Token"; "Content-Type"="application/json"; "Accept"="application/json" }
 
@@ -225,6 +225,7 @@ foreach ($device in $devices) {
             $updateUri = "https://webexapis.com/v1/workspaces/$($tracker.WorkspaceID)"
             $jsonPayload = $updateBody | ConvertTo-Json -Depth 10
 
+            $callingSuccess = $false
             for ($attempt = 1; $attempt -le 4; $attempt++) {
                 if ($attempt -eq 4) { Start-Countdown -Seconds 120 -Message "Finalizing Cloud State (Fallback Delay)" }
                 elseif ($attempt -gt 1) { Start-Sleep -Seconds 5; Write-Log 1 "Retrying Calling (Attempt $attempt/3)..." "Yellow" }
@@ -232,12 +233,23 @@ foreach ($device in $devices) {
                 try {
                     $response = Invoke-WebRequest -Uri $updateUri -Method Put -Headers $webexHeaders -Body $jsonPayload -UseBasicParsing
                     $tracker.HttpStatus = [int]$response.StatusCode
-                    $tracker.Reason += " & Calling Enabled"; break
+                    $tracker.Reason += " & Calling Enabled"
+                    $callingSuccess = $true; break
                 } catch {
                     $tracker.HttpStatus = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { "Err" }
-                    if ($attempt -eq 4) { $tracker.Reason += " (Converted-NoCalling: $(Get-WebexError $_))" }
+                    $errRaw = Get-WebexError $_
+                    if ($attempt -eq 4) { 
+                        Write-Host "`n  [!] Calling Enablement failed after extended delay: $errRaw" -ForegroundColor Yellow
+                        $choice = Read-Host "      [C]ontinue (Skip Calling), [S]kip Device, [Q]uit"
+                        if ($choice -eq 's') { $tracker.Reason += " (Calling Failed; skipped by user)"; $executionResults += $tracker; break }
+                        if ($choice -eq 'q') { exit }
+                        # If 'c', we just record the error and move on
+                        $tracker.Reason += " (Converted-NoCalling: $errRaw)"
+                    }
                 }
             }
+            # If user skipped device in the prompt, move to next device
+            if ($tracker.Reason -match "skipped by user") { continue }
         }
 
         $tracker.Success = "SUCCESS"; Write-Host "Success!" -ForegroundColor Green
