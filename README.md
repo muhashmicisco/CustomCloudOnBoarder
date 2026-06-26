@@ -108,9 +108,9 @@ If a Location and Extension were provided:
 
 ---
 
-## ⚙️ Debug Levels
+## ⚙️ Debug Log Levels
 
-You can toggle the verbosity of the script by changing the `$DebugLevel` variable at the top of the `.ps1` file:
+You can toggle the verbosity of the script by changing the variable "$LogLevel" at the top of the `.ps1` file:
 
 *   **Level 1 (Basic)**: Shows standard progress and success/fail results.
 *   **Level 2 (Technical)**: Adds API URIs, HTTP Methods, and Status Codes.
@@ -125,7 +125,9 @@ This log captures:
 *   **Success/Fail** status.
 *   **Resolved IDs** (Workspace, Person, Location).
 *   **HTTP Status Codes** for the final calling enablement.
-*   **Detailed Error Reasons** including raw API error messages from Cisco.
+*   **Detailed Error Reasons** including raw API error messages from Cisco.<br>
+<br><br>
+However when the LogLevel=3 you will get an extra `VerboseErrorLog_YYYYMMDD_HHMMSS.txt`. 
 
 ## 🛠 Troubleshooting Guide
 
