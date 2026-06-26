@@ -87,7 +87,7 @@ A Webex Workspace is created using the resolved identity. If personalized, it us
 The script connects to the local device IP and:
 1.  Sets the `SystemUnit Name` to match the Cloud identity.
 2.  Turn OFF the **First Time Setup Wizard**.
-3.  Applies **Manual Proxy Settings** (if provided/optional).
+3.  Applies **PacURL/Manual Proxy Settings** (if provided/optional).
 4.  Initiates the registration using the cloud-provided activation code.
 
 **Note: If a PACURL is needed instead of Manual Proxy, use PowerShell script named BCOT_PACUrl.ps1.
@@ -99,8 +99,8 @@ If an email was provided, the script flips the device from "Shared" to "Personal
 The device is sent a `ConvertToCloud` XML command (at which point the device will restart).
 
 If a Location and Extension were provided:
-1.  **2-Minute Safety Delay**: The script waits for the cloud calling sub-system to initialize.
-3.  A `PUT` request is sent to the Workspace API to assign the extension and location, explicitly locking in the `displayName`.
+1.  **2-Minute Safety Delay**: The script tries to convert the Workspace calling type 3 times if possible and waits for the cloud calling sub-system to initialize for 120s if needed. Will prompt to continue, skip or quit if the API still fails. 
+2.  A `PUT` request is sent to the Workspace API to assign the extension and location, explicitly locking in the `displayName`.
 
 ---
 
