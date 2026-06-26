@@ -126,7 +126,7 @@ This log captures:
 *   **Resolved IDs** (Workspace, Person, Location).
 *   **HTTP Status Codes** for the final calling enablement.
 *   **Detailed Error Reasons** including raw API error messages from Cisco.<br><br>
-However when the LogLevel=3 you will get an extra `VerboseErrorLog_YYYYMMDD_HHMMSS.txt`. 
+NOTE: When the LogLevel=3 you will get an extra `VerboseErrorLog_YYYYMMDD_HHMMSS.txt` capturing all Client-Server requests and responses. 
 
 ## 🛠 Troubleshooting Guide
 
