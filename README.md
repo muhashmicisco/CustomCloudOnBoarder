@@ -29,6 +29,14 @@ You must obtain a Bearer Token from [developer.webex.com](https://developer.webe
 *   The machine must have HTTPS access to the local IP addresses of the Cisco devices, the set username and password.
 *   PowerShell 5.1 or higher.
 
+### 3. How To Use
+*   Simply run the script to run all phases in a new PowerShell window: .\BCOT_Combined.ps1
+*   Stop after Lookups: .\BCOT_Combined.ps1 -StopAt 1
+*   Stop after Workspace Creation: .\BCOT_Combined.ps1 -StopAt 2
+*   Stop after Device Registration: .\BCOT_Combined.ps1 -StopAt 3
+*   Stop after Device Peronsonalization: .\BCOT_Combined.ps1 -StopAt 4
+*   Fully Automated (Stop after Device Peronsonalization): .\BCOT_Combined.ps1 -CSVPath "C:\devices.csv" -Token "YOUR_TOKEN" -StopAt 4
+
 ---
 
 ## 📋 CSV Configuration
