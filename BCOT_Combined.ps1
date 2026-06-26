@@ -5,7 +5,7 @@
 .PARAMETER StopAt
     The phase number to stop at (1-5). Default is 5.
 .PARAMETER LogLevel
-    Sets the verbosity level (1-3). Default is 3.
+    Sets the verbosity level (1-3). Default is 1.
     1: Basic | 2: Technical | 3: Verbose (Payloads + File Logging)
 #>
 
@@ -15,7 +15,7 @@ Param(
     [int]$StopAt = 5,
 
     [Parameter(Mandatory=$false)]
-    [int]$LogLevel = 3,
+    [int]$LogLevel = 1,
 
     [Parameter(Mandatory=$false)]
     [string]$CSVPath,
