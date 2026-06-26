@@ -1,4 +1,4 @@
-# Cisco RoomOS Bulk Cloud Onboarding Tool (GA 1.0)
+# Cisco RoomOS Bulk Cloud Onboarding Tool
 
 This PowerShell automation tool is designed for Customer Delivery Architects and Administrators to perform bulk registration of on-net Cisco RoomOS devices (brand new out-of-box OR factory-reset) to the Webex Cloud. It bridges the gap between local device administration and Webex Control Hub management, automating identity resolution, cloud provisioning, and Webex Calling enablement (extension only). 
 
@@ -174,5 +174,5 @@ This log captures:
 <img width="2638" height="5510" alt="image" src="https://github.com/user-attachments/assets/f21f308e-8d5e-4dd6-afb6-4b44be8051a3" />
 
 ---
-Note: Contains AI-generated Code
+Note: Contains AI-generated Code, use at own discretion.
 ***
