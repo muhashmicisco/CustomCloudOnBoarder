@@ -1,11 +1,12 @@
 <#
 .SYNOPSIS
-    Automated Bulk Onboarding for Cisco RoomOS devices to Webex Cloud (GA 1.6).
+    Automated Bulk Onboarding for Cisco RoomOS devices to Webex Cloud (GA 1.6.1).
     
 .PARAMETER StopAt
     The phase number to stop at (1-5). Default is 5.
-.PARAMETER Debug
-    Sets the debug level (1-3). Default is 3.
+.PARAMETER LogLevel
+    Sets the verbosity level (1-3). Default is 3.
+    1: Basic | 2: Technical | 3: Verbose (Payloads + File Logging)
 #>
 
 Param(
@@ -14,7 +15,7 @@ Param(
     [int]$StopAt = 5,
 
     [Parameter(Mandatory=$false)]
-    [int]$Debug = 1,
+    [int]$LogLevel = 1,
 
     [Parameter(Mandatory=$false)]
     [string]$CSVPath,
@@ -33,19 +34,19 @@ $originalCallback = [System.Net.ServicePointManager]::ServerCertificateValidatio
 
 # Initialize Logging Paths
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$logPath = "ExecutionSummary_$timestamp.csv"
+$summaryLogPath = "ExecutionSummary_$timestamp.csv"
 $debugLogPath = "DebugVerboseLog_$timestamp.txt"
-$DebugLevel = $Debug
+$GlobalDebugLevel = $LogLevel
 
-Write-Host "=== Cisco RoomOS Bulk Cloud Onboarding (GA Code 1.6) ===" -ForegroundColor Cyan
-Write-Host "Debug Level: $DebugLevel | Stop At Phase: $StopAt" -ForegroundColor Yellow
-if ($DebugLevel -eq 3) { Write-Host "Verbose Debug File: $debugLogPath" -ForegroundColor DarkGray }
+Write-Host "=== Cisco RoomOS Bulk Cloud Onboarding (GA Code 1.6.1) ===" -ForegroundColor Cyan
+Write-Host "Log Level: $GlobalDebugLevel | Stop At Phase: $StopAt" -ForegroundColor Yellow
+if ($GlobalDebugLevel -eq 3) { Write-Host "Verbose Debug File: $debugLogPath" -ForegroundColor DarkGray }
 
 # --- Helper Functions ---
 
 function Write-Log {
     param([int]$Level, [string]$Message, [string]$Color = "Gray")
-    if ($DebugLevel -ge $Level) {
+    if ($GlobalDebugLevel -ge $Level) {
         $prefix = if ($Level -eq 2) { "[TECH]" } elseif ($Level -eq 3) { "[VERBOSE]" } else { "" }
         $time = Get-Date -Format "HH:mm:ss"
         $formattedMsg = "$time $prefix $Message"
@@ -54,7 +55,7 @@ function Write-Log {
         Write-Host "  $formattedMsg" -ForegroundColor $Color
         
         # Output to debug file if Level 3
-        if ($DebugLevel -eq 3) {
+        if ($GlobalDebugLevel -eq 3) {
             $formattedMsg | Out-File -FilePath $debugLogPath -Append
         }
     }
@@ -303,6 +304,6 @@ Write-Host "`n==================================================" -ForegroundCol
 Write-Host "               EXECUTION SUMMARY                  " -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 $executionResults | Format-Table IP, Success, HttpStatus, Reason -AutoSize
-$executionResults | Export-Csv -Path $logPath -NoTypeInformation
-Write-Host "Summary saved to: $logPath" -ForegroundColor Green
-if ($DebugLevel -eq 3) { Write-Host "Verbose Debug Log saved to: $debugLogPath" -ForegroundColor Green }
+$executionResults | Export-Csv -Path $summaryLogPath -NoTypeInformation
+Write-Host "Summary saved to: $summaryLogPath" -ForegroundColor Green
+if ($GlobalDebugLevel -eq 3) { Write-Host "Verbose Debug Log saved to: $debugLogPath" -ForegroundColor Green }
