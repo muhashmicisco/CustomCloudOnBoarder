@@ -33,7 +33,7 @@ You must obtain a Bearer Token from [developer.webex.com](https://developer.webe
   * Basic operation:<br>
    Simply run the script (all 5 phases) in a new PowerShell window: `.\BCOT_Combined.ps1`<br>
    
-  * Advanced options:<br>
+  * Advanced options(stop at any phase):<br>
    Use flags to stop script at a certain Phase if you choose:<br>
    Stop after Lookups: `.\BCOT_Combined.ps1 -StopAt 1`<br>
    Stop after Workspace Creation: `.\BCOT_Combined.ps1 -StopAt 2`<br>
