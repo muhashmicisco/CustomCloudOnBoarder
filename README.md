@@ -38,7 +38,7 @@ You must obtain a Bearer Token from [developer.webex.com](https://developer.webe
    Stop after Lookups: `.\BCOT_Combined.ps1 -StopAt 1`<br>
    Stop after Workspace Creation: `.\BCOT_Combined.ps1 -StopAt 2`<br>
    Stop after Webex Edge Registration: `.\BCOT_Combined.ps1 -StopAt 3`<br>
-   Stop after Webex Edge Semi-Peronsonalization: `.\BCOT_Combined.ps1 -StopAt 4`<br>
+   Stop after Webex Edge Semi-personalization: `.\BCOT_Combined.ps1 -StopAt 4`<br>
    Fully Automated using CSV: `.\BCOT_Combined.ps1 -CSVPath "C:\devices.csv" -Token "YOUR_TOKEN" -StopAt 4`<br>
 
 ---
